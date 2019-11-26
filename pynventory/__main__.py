@@ -73,9 +73,12 @@ def main():
         t.start()
 
     # Providing threads with work
-    ip_range = list(ipaddress.ip_network(args.ip_range))
-    # Ignore first and last address -> Network and Broadcast addresses
-    for host in ip_range[1:-1]:
+    ip_range = ipaddress.ip_network(args.ip_range)
+    # Ignore Network and Broadcast addresses
+    skipp_addresses = [ip_range.network_address, ip_range.broadcast_address]
+    for host in ip_range:
+        if host in skipp_addresses:
+            continue
         compress_queue.put(str(host))
 
     # Wait for queue to finish
