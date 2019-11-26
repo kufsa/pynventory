@@ -2,12 +2,9 @@
 
 Create a DokuWiki Linux Server inventory table.
 
-
-usage:
-
 ```
 # pynventory --help
-usage: python ServerMgnt/main.py  192.168.1.0/24 --hostname --cpu_cores --memory
+usage: pynventory 192.168.1.0/24 --hostname --cpu_cores --memory
 
 Create a DokuWiki friendly inventory table of you servers
 
