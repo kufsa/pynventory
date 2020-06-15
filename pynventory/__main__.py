@@ -17,6 +17,15 @@ parser.add_argument('--ntp_host', action='append_const', const=LinuxHost.GetNtpS
 parser.add_argument('--memory', action='append_const', const=LinuxHost.GetMemory, dest='host_checks')
 parser.add_argument('--disk', action='append_const', const=LinuxHost.GetDiskSize, dest='host_checks')
 parser.add_argument('--kernel', action='append_const', const=LinuxHost.GetKernelVersion, dest='host_checks')
+parser.add_argument('--link_host',
+                    action='store',
+                    dest='link_host',
+                    default=False,
+                    help='create link to a new page for host description with this as base url')
+parser.add_argument('--link_empty_host',
+                    action='store_true',
+                    default=False,
+                    help='create links for nonexistent hosts')
 parser.add_argument('-d', action='store_true', dest='debug', help='enable verbose output to stderr')
 args = parser.parse_args()
 
@@ -94,6 +103,14 @@ def main():
 
     # Convert all the cells into strings
     cells = [[str(cell) for cell in row] for row in [header_title, ] + host_result]
+
+    # create link to hosts if arg is set
+    if args.link_host:
+        for row in cells[1:]:
+            # Only create a link if the host exists or the flag is set
+            if row[1] or args.link_empty_host:
+                row[0] = f'[[{args.link_host}:{row[0]}|{row[0]}]]'
+
     # Get longest entry for every column
     column_length = [max(map(len, col)) for col in zip(*cells)]
 
