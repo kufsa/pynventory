@@ -26,7 +26,7 @@ parser.add_argument('--link_empty_host',
                     action='store_true',
                     default=False,
                     help='create links for nonexistent hosts')
-parser.add_argument('-d', action='store_true', dest='debug', help='enable verbose output to stderr')
+parser.add_argument('-d', action='store_true', dest='debug', help='enable debug output to stderr')
 args = parser.parse_args()
 
 # Defining globals
