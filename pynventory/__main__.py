@@ -21,6 +21,7 @@ parser.add_argument('--ntp_host', action='append_const', const=LinuxHost.GetNtpS
 parser.add_argument('--memory', action='append_const', const=LinuxHost.GetMemory, dest='host_checks')
 parser.add_argument('--disk', action='append_const', const=LinuxHost.GetDiskSize, dest='host_checks')
 parser.add_argument('--kernel', action='append_const', const=LinuxHost.GetKernelVersion, dest='host_checks')
+parser.add_argument('--user', action='store', dest='user', help='Set ssh connecting user', default='root')
 parser.add_argument('--link_host',
                     action='store',
                     dest='link_host',
@@ -49,7 +50,7 @@ def check_host(host):
         print('.', end='', file=sys.stderr, flush=True)
 
     try:
-        i = LinuxHost(host)
+        i = LinuxHost(host, args.user)
         host_result = [i, ]
         for check in args.host_checks:
             host_result.append(check(i))

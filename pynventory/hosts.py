@@ -2,8 +2,8 @@ from fabric import Connection
 
 
 class LinuxHost:
-    def __init__(self, host):
-        self.connection = Connection(host, connect_timeout=1)
+    def __init__(self, host, user):
+        self.connection = Connection(host, connect_timeout=1, user=user, )
         self.host = host
 
     @staticmethod
