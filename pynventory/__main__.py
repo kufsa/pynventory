@@ -4,6 +4,10 @@ import ipaddress
 import threading
 
 from queue import Queue
+import socket
+
+import paramiko
+
 from pynventory.hosts import LinuxHost
 
 
@@ -26,6 +30,10 @@ parser.add_argument('--link_empty_host',
                     action='store_true',
                     default=False,
                     help='create links for nonexistent hosts')
+parser.add_argument('--report_errors',
+                    action='store_true',
+                    dest='report_errors',
+                    help='Report connection failures (except for timeout) to stdout')
 parser.add_argument('-d', action='store_true', dest='debug', help='enable verbose output to stderr')
 args = parser.parse_args()
 
@@ -46,17 +54,33 @@ def check_host(host):
         for check in args.host_checks:
             host_result.append(check(i))
 
-        result.append(host_result)
+        if args.debug:
+            print('Host: %s Ok' % host, file=sys.stderr)
 
-    except Exception as e:
+    except paramiko.ssh_exception.NoValidConnectionsError as e:
+        # NoValidConnection wraps all socket related exceptions socket.error
         empty_list = ['' for _ in range(len(args.host_checks))]
-        result.append([host, ] + empty_list)
+        if args.report_errors:
+            empty_list[0] = 'Error: ' + ' '.join(str(e).split()[2:8])
+        host_result = [host, ] + empty_list
+
+    except paramiko.ssh_exception.AuthenticationException as e:
+        # Catch all paramiko Auth exceptions
+        empty_list = ['' for _ in range(len(args.host_checks))]
+        if args.report_errors:
+            empty_list[0] = 'Error: ' + str(e)
+        host_result = [host, ] + empty_list
+
+    except socket.timeout as e:
+        # Don't report socket timeouts
+        empty_list = ['' for _ in range(len(args.host_checks))]
+
+        host_result = [host, ] + empty_list
         if args.debug:
             print('Host: %s Error: %s' % (host, e), file=sys.stderr)
-        return
 
-    if args.debug:
-        print('Host: %s Ok' % host, file=sys.stderr)
+    finally:
+        result.append(host_result)
 
     return
 
