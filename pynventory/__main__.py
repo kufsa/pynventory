@@ -65,13 +65,6 @@ def check_host(host):
             empty_list[0] = 'Error: ' + ' '.join(str(e).split()[2:8])
         host_result = [host, ] + empty_list
 
-    except paramiko.ssh_exception.AuthenticationException as e:
-        # Catch all paramiko Auth exceptions
-        empty_list = ['' for _ in range(len(args.host_checks))]
-        if args.report_errors:
-            empty_list[0] = 'Error: ' + str(e)
-        host_result = [host, ] + empty_list
-
     except socket.timeout as e:
         # Don't report socket timeouts
         empty_list = ['' for _ in range(len(args.host_checks))]
@@ -79,6 +72,13 @@ def check_host(host):
         host_result = [host, ] + empty_list
         if args.debug:
             print('Host: %s Error: %s' % (host, e), file=sys.stderr)
+
+    except (paramiko.ssh_exception.AuthenticationException, Exception) as e:
+        # Catch all paramiko Auth exceptions
+        empty_list = ['' for _ in range(len(args.host_checks))]
+        if args.report_errors:
+            empty_list[0] = 'Error: ' + str(e)
+        host_result = [host, ] + empty_list
 
     finally:
         result.append(host_result)
