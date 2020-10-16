@@ -26,6 +26,7 @@ parser.add_argument('--link_empty_host',
                     action='store_true',
                     default=False,
                     help='create links for nonexistent hosts')
+parser.add_argument('--user', action='store', dest='ssh_user', help='ssh user', default='root')
 parser.add_argument('-d', action='store_true', dest='debug', help='enable debug output to stderr')
 args = parser.parse_args()
 
@@ -41,7 +42,7 @@ def check_host(host):
         print('.', end='', file=sys.stderr, flush=True)
 
     try:
-        i = LinuxHost(host)
+        i = LinuxHost(host, args.ssh_user)
         host_result = [i, ]
         for check in args.host_checks:
             host_result.append(check(i))
