@@ -13,7 +13,7 @@ with open(os.path.join(HERE, "README.md")) as fid:
 # This call to setup() does all the work
 setup(
     name="pynventory",
-    version="1.0.0",
+    version="1.2.1",
     description="Generate a Dokuwiki friendly inventory table of you Linux Servers",
     long_description=README,
     long_description_content_type="text/markdown",

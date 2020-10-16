@@ -2,11 +2,8 @@ from fabric import Connection
 
 
 class LinuxHost:
-    def __init__(self, host, ssh_user='root'):
-        self.connection = Connection(host,
-                                     connect_timeout=1,
-                                     user=ssh_user)
-
+    def __init__(self, host, user):
+        self.connection = Connection(host, connect_timeout=1, user=user, )
         self.host = host
 
     @staticmethod
