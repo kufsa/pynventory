@@ -1,4 +1,5 @@
 from fabric import Connection
+from invoke.exceptions import UnexpectedExit
 
 
 class LinuxHost:
@@ -15,23 +16,25 @@ class LinuxHost:
 
     class GetOsRelease:
         def __init__(self, parent):
-            output = parent.connection.run('cat /etc/issue', hide=True)
-            if 'Server' in output.stdout:
-                output = output.stdout.split('\n')[0]
-            elif 'Server' not in output.stdout:
-                output = parent.connection.run('cat /etc/redhat-release', hide=True).stdout
-            else:
-                output = 'Error getting release'
-
-            # remove redundant output
-            filter_list = ['Linux', 'release', '(Core)', '(Santiago)', '(Maipo)', 'Server', 'Enterprise']
-            self.clean_output = []
-            for word in output.split():
-                if word not in filter_list:
-                    self.clean_output.append(word)
+            try:
+                self.output = parent.connection.run('cat /etc/os-release | grep "PRETTY_NAME"', hide=True)
+                self.output = self.output.stdout.split('=')[1].replace('"', '')
+            except UnexpectedExit:
+                try:
+                    self.output = parent.connection.run(' cat /etc/redhat-release', hide=True)
+                    self.output = self.output.stdout
+                except UnexpectedExit:
+                    self.output = "Failed to retrieve OS Release"
 
         def __str__(self):
-            return ' '.join(self.clean_output)
+            # some words to remove from output as they are redundant
+            clean_up = ['Linux', 'Server', 'release']
+            _out = []
+
+            for i in self.output.split():
+                if i not in clean_up:
+                    _out.append(i)
+            return ' '.join(_out)
 
         @staticmethod
         def display_name():
