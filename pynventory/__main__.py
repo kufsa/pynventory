@@ -11,9 +11,16 @@ import paramiko
 from pynventory.hosts import LinuxHost
 
 
-parser = argparse.ArgumentParser(description='Create a DokuWiki friendly inventory table of you servers',
+parser = argparse.ArgumentParser(description='Create a DokuWiki friendly inventory table or system hostfile of your '
+                                             'servers',
                                  usage='pynventory 192.168.1.0/24 --hostname --cpu_cores --memory')
 parser.add_argument('ip_range', action='store', help='CIDR IP range. ie: 192.168.0.0/24')
+parser.add_argument('--format',
+                    action='store',
+                    help='Choose the output format. Option "hostfile" ignores all additional checks but forces '
+                         '--hostname',
+                    choices=['dokuwiki', 'hostfile'],
+                    default='dokuwiki')
 parser.add_argument('--cpu_cores', action='append_const', const=LinuxHost.GetCpuCores, dest='host_checks')
 parser.add_argument('--hostname', action='append_const', const=LinuxHost.GetHostname, dest='host_checks')
 parser.add_argument('--os_version', action='append_const', const=LinuxHost.GetOsRelease, dest='host_checks')
@@ -48,6 +55,9 @@ result = []
 def check_host(host):
     if not args.debug:
         print('.', end='', file=sys.stderr, flush=True)
+
+    if args.format == "hostfile":
+        args.host_checks = [LinuxHost.GetHostname, ]
 
     try:
         i = LinuxHost(host, args.ssh_user)
@@ -93,9 +103,42 @@ def process_queue():
         compress_queue.task_done()
 
 
+def format_dokuwiki(host_result):
+    header_title = ['Host', ] + [check.display_name() for check in args.host_checks]
+
+    # Convert all the cells into strings
+    cells = [[str(cell) for cell in row] for row in [header_title, ] + host_result]
+
+    # create link to hosts if arg is set
+    if args.link_host:
+        for row in cells[1:]:
+            # Only create a link if the host exists or the flag is set
+            if row[1] or args.link_empty_host:
+                row[0] = f'[[{args.link_host}:{row[0]}|{row[0]}]]'
+
+    # Get the longest entry for every column
+    column_length = [max(map(len, col)) for col in zip(*cells)]
+
+    # Create spacing for cells
+    format_header = '^ {} ^'.format(' ^ '.join('{{:{}}}'.format(length) for length in column_length))
+    format_body = '| {} |'.format(' | '.join('{{:{}}}'.format(length) for length in column_length))
+
+    # Print output...
+    print(format_header.format(*header_title))
+
+    for row in cells[1:]:
+        print(format_body.format(*row))
+
+
+def format_hostfile(host_result):
+    for host in host_result:
+        if host[1]:
+            print(host[0], host[1])
+
+
 def main():
     # Exit if no checks are given
-    if not args.host_checks:
+    if not args.host_checks and args.format == "dokuwiki":
         parser.print_help()
         exit(1)
 
@@ -106,8 +149,12 @@ def main():
         t.daemon = True
         t.start()
 
-    # Providing threads with work
-    ip_range = ipaddress.ip_network(args.ip_range)
+    try:
+        # Providing threads with work
+        ip_range = ipaddress.ip_network(args.ip_range)
+    except ValueError as e:
+        print(f"Failed to parse the provided network with error: {e}")
+        exit(1)
     # Ignore Network and Broadcast addresses
     skipp_addresses = [ip_range.network_address, ip_range.broadcast_address]
     for host in ip_range:
@@ -124,30 +171,10 @@ def main():
     # Results from queues are not sorted.
     host_result = sorted(result[1:], key=lambda a: int(str(a[0]).split('.')[3]))
 
-    header_title = ['Host', ] + [check.display_name() for check in args.host_checks]
-
-    # Convert all the cells into strings
-    cells = [[str(cell) for cell in row] for row in [header_title, ] + host_result]
-
-    # create link to hosts if arg is set
-    if args.link_host:
-        for row in cells[1:]:
-            # Only create a link if the host exists or the flag is set
-            if row[1] or args.link_empty_host:
-                row[0] = f'[[{args.link_host}:{row[0]}|{row[0]}]]'
-
-    # Get longest entry for every column
-    column_length = [max(map(len, col)) for col in zip(*cells)]
-
-    # Create spacing for cells
-    format_header = '^ {} ^'.format(' ^ '.join('{{:{}}}'.format(length) for length in column_length))
-    format_body = '| {} |'.format(' | '.join('{{:{}}}'.format(length) for length in column_length))
-
-    # Print output...
-    print(format_header.format(*header_title))
-
-    for row in cells[1:]:
-        print(format_body.format(*row))
+    if args.format == "dokuwiki":
+        format_dokuwiki(host_result)
+    if args.format == "hostfile":
+        format_hostfile(host_result)
 
 
 if __name__ == '__main__':
